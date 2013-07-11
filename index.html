@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hot or Cold</title>
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+
+    <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+
+    <style>
+      #buttons div {
+        padding: 2px;
+      }
+      #buttons .btn-large {
+        width: 90px;
+        height: 50px;
+      }
+      #newGameButton {
+        margin-top: 10px;
+      }
+      #messages {
+        width: 350px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container text-center'>
+      <h2 class='row'>Hot or Cold</h2>
+
+      <div class='text-center row'>
+        <div id='messages' class='alert alert-info'>
+          Guess a number
+        </div>
+      </div>
+
+      <div id='inputs' class='input-prepend input-append row'>
+        
+        <input type='text' id='userInput' class='input-small text-center' />
+        <button type='button' id='guessButton' class='btn'>Guess</button>
+        <button type='button' id='guessCount' class='btn'>0</button>
+      </div>
+
+      <div id='buttons' class='row'>
+        <div class=''>
+          <button id='button_1' class='btn btn-large'>1</button>
+          <button id='button_2' class='btn btn-large'>2</button>
+          <button id='button_3' class='btn btn-large'>3</button>
+        </div>
+        <div class=''>
+          <button id='button_4' class='btn btn-large'>4</button>
+          <button id='button_5' class='btn btn-large'>5</button>
+          <button id='button_6' class='btn btn-large'>6</button>
+        </div>
+        <div class=''>
+          <button id='button_7' class='btn btn-large'>7</button>
+          <button id='button_8' class='btn btn-large'>8</button>
+          <button id='button_9' class='btn btn-large'>9</button>
+        </div>
+        <div class=''>
+          <button type='button' id='resetButton' class='btn btn-large'>C</button>
+          <button id='button_0' class='btn btn-large'>0</button>
+          <button type='button' id='backButton' class='btn btn-large'>
+            Back
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class='text-center row'>
+      <button type='button' id='newGameButton' class='btn btn-large'>New Game</button>
+    </div>
+
+    <script type='text/javascript'>
+    var HC = function($) {
+      var h = {};
+      // This should create a privately scoped number
+      var randomNumber;
+
+      h.init = function() {
+        h.data = {
+          min: 1,
+          max: 100
+        };
+
+        // Init references
+        h.$userInput     = $("#userInput");
+        h.$guessButton   = $("#guessButton");
+        h.$guessCount    = $("#guessCount");
+        h.$resetButton   = $("#resetButton");
+        h.$backButton    = $("#backButton");
+        h.$buttons       = $("#buttons .btn");
+        h.$messages      = $("#messages");
+        h.$newGameButton = $("#newGameButton");
+
+        // Bind Events
+        h.$buttons.on('click', h.setUserInput);
+        h.$resetButton.on('click', h.resetUserInput);
+        h.$backButton.on('click', {isBack: true}, h.resetUserInput);
+        $(document).on('keydown', h.triggerButton);
+        h.$guessButton.on('click', h.guessNumber);
+        h.$userInput
+          .on('keydown', h.isEnterKey)
+          .on('keyup', function(e) {
+            if (e.keyCode != 13) {
+              h.validateInput(h.$userInput.val());
+            } else {
+              e.preventDefault();
+              return false;
+            }
+          });
+        h.$newGameButton.on('click', h.resetGame);
+
+        h.generateRandomNumber();
+         
+      }
+
+      h.setUserInput = function(e) {
+        e.preventDefault();
+        var currentValue = h.$userInput.val();
+        var newValue = currentValue + $(this).text();
+        if (h.validateInput(newValue)) {
+          h.$userInput.val(newValue);
+        } 
+        return false;
+      } // setUserInput
+
+      h.validateInput = function(val) {
+        // Remove all alert classes
+        h.$messages.removeClass('alert-info alert-error alert-success')
+        // If within thresholds, it's valid
+        if (val >= h.data.min && val <= h.data.max) {
+          h.$messages
+            .text("Press <enter> or click the Guess Button")
+            .addClass('alert-info');
+          return true;
+        } else if (val == '') { // If blank, show default message
+          h.$messages
+            .text("Guess a number")
+            .addClass('alert-info');
+          return true;
+        } else { // Else it's not valid, alert the user
+          h.$messages
+            .text('Please enter a valid number between ' + h.data.min + ' and ' + h.data.max)
+            .addClass('alert-error');
+          // Remove non numeric
+          val = val.replace(/[^\d]/g, '');
+          // Cut it down to two characters
+          if (val.length > 2) {
+            val = val.substring(0, val.length - 1);
+          }
+          h.$userInput.val(val);
+          return false;
+        }
+      } // validateInput
+
+      h.resetUserInput = function(e) {
+        e.preventDefault();
+        if (e.data == undefined) {
+          h.$userInput.val('');
+          h.validateInput(h.$userInput.val());
+        } else if(e.data.isBack) {
+          // Indicates the back button was pressed, only remove last number
+          var currentValue = h.$userInput.val();
+          var newValue = currentValue.substring(0, currentValue.length - 1);
+          h.$userInput.val(newValue);
+          h.validateInput(h.$userInput.val());
+        }
+        return false;
+      } // resetUserInput
+
+      h.triggerButton = function(e) {
+        // Get the value of the key pressed
+        var buttonNum = String.fromCharCode(e.keyCode);
+        // If it is numeric, trigger the associated button
+        if (buttonNum >= 0 && buttonNum <= 9 && Number(e.keyCode) !== 13) {
+          e.preventDefault();
+          $("#button_" + buttonNum).trigger('click');
+          return false;
+        } else if (buttonNum == 'c' || buttonNum == 'C') {
+          // If the key pressed was a C, trigger the clear button
+          e.preventDefault();
+          h.$resetButton.trigger('click');
+          return false;
+        } else if (e.keyCode == 8) { 
+          // If the backspace button was pressed, trigger the back button
+          e.preventDefault();
+          h.$backButton.trigger('click');
+          return false;
+        } else if (e.keyCode == 13) {
+          // If the enter key is pressed, trigger guess button
+          e.preventDefault(); 
+          h.$guessButton.trigger('click');
+          return false;
+        }
+      } // triggerButton
+
+      h.generateRandomNumber = function() {
+        randomNumber = Math.floor((Math.random() * (h.data.max - h.data.min + 1)) + h.data.min);
+      } // generateRandomNumber
+
+      h.isEnterKey = function(e) {
+        if (e.keyCode == 13) {
+          e.preventDefault();
+          h.guessNumber();
+          return false;
+        } 
+      } // isEnterKey
+
+      h.guessNumber = function() {
+        var guess = h.$userInput.val();
+        if (guess == '') {
+          h.$messages
+            .removeClass('alert-info alert-error alert-success')
+            .text('Please enter a valid number between ' + h.data.min + ' and ' + h.data.max)
+            .addClass('alert-error');
+        } else {
+          // Increment the guess counter
+          h.$guessCount.text(Number(h.$guessCount.text()) + 1);
+          if (guess != randomNumber) {
+            // Didn't guess correctly, let's get the difference and display a message
+            var diff = randomNumber - guess;
+            h.displayErrorMessage(diff);
+          } else {
+            // Guessed correctly!
+            h.$messages
+              .removeClass('alert-info alert-error alert-success')
+              .text('You guessed the correct number: ' + randomNumber)
+              .addClass('alert-success');
+          }
+          h.$userInput.val('');
+        }
+      } // guessNumber
+
+      h.displayErrorMessage = function(diff) {
+        var message = '';
+        var className = '';
+        // Want to get the absolute value
+        diff = Math.abs(diff); 
+        if (diff >= 50) {
+          message = 'Freezing';
+        } else if (diff >= 40) {
+          message = 'Cold';
+        } else if (diff >= 30) {
+          message = 'Chilly';
+        } else if (diff >= 20) {
+          message = 'Lukewarm';
+        } else if (diff >= 15) {
+          message = 'Warm';
+        } else if (diff >= 10) {
+          message = 'Hot';
+        } else if (diff > 1) {
+          message = 'On Fire';
+        } else {
+          message = 'Scortching';
+        }
+        // Update the message
+        h.$messages
+          .removeClass('alert-info alert-error alert-success')
+          .text(message)
+          .addClass('alert-info');
+      } // displayErrorMessage
+
+      h.resetGame = function() {
+        h.$messages
+          .removeClass('alert-info alert-error alert-success')
+          .text("Guess a number")
+          .addClass('alert-info');
+        h.$guessCount.text(0);
+        h.$userInput.val('');
+        h.generateRandomNumber();
+      } // resetGame
+
+      return h;
+    }($);
+
+    $(document).ready(function() {
+      HC.init();
+    });
+    </script>
+  </body>
+</html>
